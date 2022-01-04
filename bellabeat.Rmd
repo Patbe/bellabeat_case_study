@@ -1,0 +1,660 @@
+---
+title: "Bellabeat Case Study"
+author: "Patick Benesch"
+date: "13 12 2021"
+output: html_document
+---
+
+
+This Case Study for the Google Data Analyst Certificate will perform data analyis for the company Bellabeat, in the smart device industry.
+
+The dataset being used contains anonymous fitness tracker data that is public domain.
+
+(dataset made available through Mobius, https://zenodo.org/record/53894#.X9oeh3Uzaao")
+
+In the this case study I apply the findings to the "Bellatbeat App", that according to the descrition, tracks health data such as  activity and sleep, among others.
+
+The following Questions will be answered:
+
+
+1. What are some trends in smart device usage?
+2. How could these Trends apply to Bellabeat customers?
+3. How could these trends help influence Bellabeat marketing Strategy
+
+I also include a data cleaning report.
+
+### Stakeholders
+
+The key stakeholders are the company's founders Urška Sršen and Sando Mur. Another stakeholder is the marketing team.
+
+
+### Executive summary
+
+* The data contains tracker data from 33 users with 940 observations overall
+
+* The data was collected within one month, from 2016-04-12 to 2016-05-12 
+
+* From the data it is not clear whether the user was a man or a woman
+
+* People mostly log light activity such as walking, a minority uses the tracker to track higher intensity activities   such as jogging
+
+* On average users did over 7600 Steps per day
+
+* Users did use the tracker to monitor calories burned and higher step counts correspond with a higher amount of      calories burned
+
+* Users of the trackers have a below average Body-Mass-Index (BMI) when compared to the average BMI in the USA
+
+* Around 70 % of the users in the dataset did use the tracker to track their sleep
+
+* It could be further investigated for what activities people use the tracker or how the tracker accounts for certain activities, as the data shows that some users on some days tracked calories burned while not tracking any steps, this could indicate other activities such as gymnastics
+
+
+### Recommendations
+
+The bellabeat app targets health conscious women who would use the app to track their activities, stress levels and sleep among others. Therefore the data analysis of the fitness tracker is relevant to the case.
+
+From the data it appears that people use their smart devices to track their activities and count calories and some also use it to track their sleep. Since most activities logged are low intensity activities, it looks like the users of the tracker are not professional athletes but people who use it daily for wellbeing and to stay fit.
+
+It would therefore imply that Bellabeat should target people who want to stay fit and healthy in their everyday lives and use the Bellabeat app to monitor their progress.
+
+Bellatbeat should also highlight the benefits of using a fitness app to keep a healthy weight, as the data shows that fitness tracker users have a below average BMI.
+
+Also, since on many days the tracker data shows no activity at all, a function that would remind users of using the tracker more often would be useful in the app. The data also shows that most of the users in the dataset do use the device to track their sleep, thus Bellabeat should also highlight that functionality.
+
+
+
+
+The next section of this report will show the analysis in detail, starting with loading of needed libraries in R.
+
+
+The next section of this report will show the analysis in detail, starting with loading of needed libraries in R.
+
+
+### Loading relevant libraries
+
+```{r echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(janitor)
+
+
+```
+
+
+
+
+### Loading the Data
+
+In this case study I used three data tables, downloaded from and made available by Mobius, https://zenodo.org/record/53894#.X9oeh3Uzaao". I saved all as CSV Files.
+
+Specifically for this study I used four tables:
+
+* dailyActivity_merged.csv
+* sleepDay_merged.csv
+* weightLogInfo_merged.csv
+* hourlyIntensities_merged.csv
+
+The data tables contains data of fitness tracker users.
+
+
+#### Main table - daily activities
+
+```{r echo=FALSE}
+main_data <- read.csv("dailyActivity_merged.csv")
+
+str(main_data)
+```
+
+#### Sleep data
+
+```{r echo=FALSE}
+sleep_data <- read.csv("sleepDay_merged.csv", sep = ";")
+str(sleep_data)
+
+```
+
+#### BMI data
+
+```{r echo=FALSE}
+BMI_data <- read.csv("weightLogInfo_merged_clean_v2.csv",sep =";")
+str(BMI_data)
+
+```
+
+### Intensity data
+
+
+```{r}
+
+
+Intensity_data <- read.csv("hourlyIntensities_merged.csv",sep =";")
+str(Intensity_data)
+
+
+
+```
+
+
+Now that the datasets are loaded I perform some data cleaning.
+
+# Data cleaning report
+
+
+* Overall there are 19 Tables to choose from, so I inspected all tables first
+
+* I inspected the data in Microsoft Excel and Google BigQuery as well as R
+
+* The data is in wide format, so for some charts I will need to transform it to a long data format
+
+* After the first inspection of all tables I checked the datasets DailyActivity Merged and   DailyCalories
+
+
+
+DailyActivity dataset:
+
+* Visual inspection of all columns and rows using conditional formatting in MS-Excel, there appear no anomalies 
+
+
+* Each row or observation is based on one user id
+
+* After the removal of dublicates in the column "ID", there is data of 33 Users and 940 observations
+
+* Checked in BigQuery using SQL if all IDs were correctly formatted with a length of 10, which is the case
+
+
+
+DailyCalories dataset:
+
+
+
+* Same number of observations as the previous table
+
+* Checked if they are in fact identical in terms of IDs
+
+* Joined both tables with the field "Calories" as key to check if those values are          identical in both tables
+
+* After inspection it became clear that they are in fact identical, therefore I dropped     the DailyCalories dataset
+
+
+BMI_data dataset:
+
+* Data on 8 Id's
+
+
+As a last cleaning step I tansform the dates from string to date format:
+
+* In Excel and SQL the date formats were incorrectly formatted
+
+* In all datatables I splitted  the date column in three columns in MS Excel -> date, time, PM/AM
+
+* Then I recreated the date column by just using the date and dropping time and PM/AM
+
+
+
+```{r echo=TRUE}
+rawdate <- strptime(main_data$ActivityDate,format="%m/%d/%Y") 
+
+dates <- as.Date(rawdate,"%m%d%Y") 
+
+
+### use the dates that are converted to dates from string and transform minutes to hours for better readability
+
+main_data <- main_data %>% 
+  mutate(ActivityDate = dates) %>% 
+  mutate(SedentaryHours = SedentaryMinutes/60)
+```
+
+
+After the data cleaning is finished I go into the analysis.
+
+
+# Analyzing the data
+
+
+First I analyse data from the DailyActivityMerged dataset.
+
+The data is within a timeframe of one month.
+
+* Min Date: 2016-04-12
+
+* Max Date: 2016-05-12 
+
+
+The following chart shows how many minutes participants spend each day for different activity levels.
+
+
+The three activity levels correspond to the metabolic equivalent of a task. These are:
+
+* light: walking up to 2 mph
+
+* fairly: walking 3.0 mph
+
+* very: jogging 6.8 
+
+
+Source: (https://community.fitbit.com/t5/Web-API-Development/About-the-METS-range-of-activities/m-p/3790959#M11037)
+
+In order to analyze the data graphically, I first changed the data that I want to long format.
+
+```{r}
+
+main_data_prep <- main_data %>%
+  select(Id, ActivityDate, VeryActiveMinutes, FairlyActiveMinutes, LightlyActiveMinutes )
+
+
+main_data_long <- main_data_prep %>%
+  pivot_longer(names_to = "Active_Minutes", values_to="Values", VeryActiveMinutes:LightlyActiveMinutes)
+
+
+main_data_long
+
+```
+
+
+
+
+```{r echo=FALSE}
+plot_activity_long<-  ggplot(data= main_data_long) + geom_smooth(mapping=aes(x=ActivityDate  , y= Values, color = Active_Minutes )) +
+ labs(title="Activity Minutes each Day", caption="Data Public Domain, made available through Mobius, https://zenodo.org/record/53894#.X9oeh3Uzaao") + theme(legend.position="bottom") + ylab("Average Minutes")
+
+plot_activity_long
+```
+
+
+
+
+```{r eval=FALSE, include=FALSE}
+
+### This code is not executed ###
+
+plot_activity<-  ggplot(data= main_data) + geom_smooth(mapping=aes(x=ActivityDate  , y= VeryActiveMinutes), colour="green") +
+   geom_smooth(mapping=aes(x=ActivityDate  , y= FairlyActiveMinutes), colour = "blue") +
+   geom_smooth(mapping=aes(x=ActivityDate  , y= LightlyActiveMinutes), colour = "red") +
+     ylab("ActivityMinutes") + labs(title="Activity Minutes each Day", color="Legend") 
+
+plot_activity
+```
+
+
+
+It becomes clear that the participants spent between 150 and 200 minutes each day on light activity (green), and less on fairly (red) and very active (blue) activities. As stated in the introductory part of this report light activity for example is walking with speed up to 2 mph.
+
+
+
+Next I created few more columns to check out the share of each activity category of the total activity hours:
+
+
+```{r echo=FALSE}
+
+
+data_group_id_aCtivity <- main_data %>% 
+  drop_na() %>% 
+  group_by(Id) %>% 
+  mutate(veryActive_dist_per_hour = (VeryActiveDistance/(VeryActiveMinutes/60))) %>% 
+  mutate(lightActive_dist_per_hour = (LightActiveDistance/(LightlyActiveMinutes/60))) %>% 
+  mutate(totalActivehours = (VeryActiveMinutes + FairlyActiveMinutes + LightlyActiveMinutes)/60) %>% 
+  mutate(share_very_active = ((VeryActiveMinutes/60)/totalActivehours)*100) %>% 
+  mutate(share_fairly_active = ((FairlyActiveMinutes/60)/totalActivehours)*100) %>%
+  mutate(share_light_active = ((LightlyActiveMinutes/60)/totalActivehours)*100)
+
+
+```
+
+```{r echo=FALSE}
+
+data_group_id_aCtivity_detail <- data_group_id_aCtivity %>% 
+  select(totalActivehours,share_very_active, share_fairly_active, share_light_active)
+
+summary(data_group_id_aCtivity_detail)
+```
+
+On average more  than *85%* of the time people did light activity such as walking, followed by around *8.756%* of very active activity such as jogging.
+
+This is also supported by the following barchart that shows that the most often logged intensity levels are below 1, which is light intensity. The chart shows the number of observations of each intensity level logged, excluding intensities of 0.
+(Source: https://www.fitabase.com/media/1930/fitabasedatadictionary102320.pdf).
+
+```{r echo=FALSE}
+Intensity_data_filtered <- Intensity_data %>% 
+filter(TotalIntensity > 0)  
+
+
+
+  
+  
+plot_intensity<-  ggplot(data= Intensity_data_filtered) + geom_bar(mapping=aes(x= AverageIntensity), fill = "green4") +
+ labs(title="Average Intensity", caption="Data Public Domain, made available through Mobius, https://zenodo.org/record/53894#.X9oeh3Uzaao") + theme(legend.position="bottom") +
+  ylab("number of observations")
+
+plot_intensity
+
+
+
+
+```
+
+
+
+
+Here is the another visualization for each ID to get a sense of how many participants did what activity:
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+plot_activity_long<-  ggplot(data= main_data_long) + geom_smooth(mapping=aes(x=ActivityDate  , y= Values, color=Active_Minutes)) + 
+  labs(title="Activity Minutes each Day",caption="Data Public Domain, made available through Mobius, https://zenodo.org/record/53894#.X9oeh3Uzaao") + facet_wrap(~Id) + theme(legend.position="bottom")
+
+  
+plot_activity_long
+
+
+```
+
+
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+
+### This code is not executed ###
+
+plot_activity<-  ggplot(data= main_data) + geom_smooth(mapping=aes(x=ActivityDate  , y= VeryActiveMinutes), colour=Active_Minutes) +
+  labs(title="Activity Minutes each Day", caption="Data Public Domain, made available through Mobius, https://zenodo.org/record/53894#.X9oeh3Uzaao") + facet_wrap(~Id) + theme(legend.position="bottom")
+plot_activity
+```
+
+
+
+
+-> Only a minority has activities labeled  "fairly active" (red lines) logged. However, most users do show very high intensity activities (blue lines)
+
+
+###Next is a visualization of just fairly and very active activity:
+
+
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+### Tnis is not calculated ### 
+
+plot_activity<-  ggplot(data= main_data_long) + geom_smooth(mapping=aes(x=ActivityDate, y= Values, color=Active_Minutes )) +
+  labs(title="Activity Minutes each Day",caption="Data Public Domain, made available through Mobius, https://zenodo.org/record/53894#.X9oeh3Uzaao")) + theme(legend.position="bottom")
+
+
+plot_activity
+```
+
+```{r echo=FALSE}
+
+
+
+plot_activity<-  ggplot(data= main_data) + geom_smooth(mapping=aes(x=ActivityDate  , y= VeryActiveMinutes), colour="blue") +
+   geom_smooth(mapping=aes(x=ActivityDate  , y= FairlyActiveMinutes), colour = "red")  +
+     ylab("ActivityMinutes") + labs(title="Activity Minutes each Day")
+
+
+plot_activity
+
+```
+
+
+On average people did high intensity excercise of around 20 Minutes per day (blue), followed by around 10 minutes of fairly active exercise.
+
+Next I calculate some further summary statistics for the data:
+
+```{r include=FALSE}
+### Here is analysis of the first main table ###
+
+### Group Table by ID - One User
+
+
+data_group_id <- main_data %>% 
+    drop_na() %>% 
+     group_by(Id) %>% 
+  summarize(mean(TotalSteps),median(TotalSteps),mean(Calories),mean(SedentaryMinutes),cor(TotalSteps,Calories)) %>% 
+  arrange(Id)
+data_group_id
+
+```
+
+
+
+```{r echo=FALSE}
+
+
+### Check out summary statistics over all ids:
+
+data_group_sum <- main_data %>% 
+  drop_na() %>% 
+   summarize(mean(TotalSteps),median(TotalSteps),min(TotalSteps),max(TotalSteps),mean(Calories),min(Calories),max(Calories),
+             mean(SedentaryHours), median(SedentaryHours), max(SedentaryHours),min(SedentaryHours),cor(SedentaryHours,Calories),
+             cor(SedentaryHours,TotalSteps), cor(SedentaryHours,VeryActiveMinutes),
+             cor(TotalSteps,Calories),
+             mean(TrackerDistance),median(TrackerDistance),max(TrackerDistance), cor(TrackerDistance,TotalSteps),
+             cor(TrackerDistance,Calories))
+  
+data_group_sum
+```
+
+
+Some observations over all Ids and days:
+
+* Correlation between TotalSteps and Calories burned is moderately high (0.59)
+
+* On average people had 16.52 sedentary hours per day, this is because on many days there is no or almost no activity recorded the whole day, see bar chart.
+
+* As can be seen in the chart, there are 80 observations of 24 sedentary hours, this could    mean that users on that day simply did not use their track
+
+* Users also walked 7637.911 steps each day on average
+
+```{r echo=FALSE}
+sedentary_hours <- ggplot(data=main_data) + geom_bar(mapping=aes(x=SedentaryHours)) +
+  
+  labs(title="Counts of sedentary hours",caption="Data Public Domain, made available through Mobius, https://zenodo.org/record/53894#.X9oeh3Uzaao") + ylab("number of observations")
+  
+
+
+sedentary_hours
+
+
+```
+
+
+
+
+
+Next I plot calories burned and steps taken to visualize the relationship between how many steps people record with their devices and how many calories they burn.
+
+
+```{r echo=FALSE}
+
+#filtered_main_data <- main_data %>% 
+#  filter(TotalSteps>0)
+
+
+
+
+plot_steps_cal <- ggplot(data=main_data) + geom_jitter(mapping=aes(x=Calories,y=TotalSteps))+
+  geom_smooth(mapping=aes(x=Calories,y=TotalSteps)) + 
+  labs(title="Relationship between steps and Calories burned",caption="Source: Public Domain, dataset made available through Mobius
+https://zenodo.org/record/53894#.X9oeh3Uzaao")
+plot_steps_cal
+```
+
+The relationship between total steps and burned calories is  visible in the chart. However, there are a few data points where the user did not log any steps, but shows calories burned. This could indicate that users did some activities such as gymnastics or logged calories burned manually, however more investigation is needed to draw any  conclusion.
+
+In the next section I include data on weight and body mass index.
+
+### Analysing data on weight and BMI
+
+```{r}
+
+
+
+# Transforming the date from string to date format
+
+
+rawdate_BMI <- strptime(BMI_data$Date,format="%Y-%m-%d") 
+
+dates_BMI <- as.Date(rawdate_BMI,"%m%d%Y")
+
+
+BMI_data <- BMI_data %>% 
+
+ mutate(Date = dates_BMI)
+
+
+
+
+```
+
+
+First I check again how many users are in the dataset:
+
+
+```{r echo=TRUE}
+check_BMI <- BMI_data %>% 
+  tabyl(Id)
+
+check_BMI
+```
+
+* Only 8 users have BMI data in the tracker 
+
+Next merge the BMI and weight data with the main table.
+
+```{r}
+merged_data_BMI <- merge(x= main_data, y = BMI_data)
+
+#head(merged_data)
+str(merged_data_BMI)
+
+
+#  drop_na()
+  
+  
+
+```
+
+
+
+Check out some summary statistics:
+
+
+```{r}
+sum_stats <- merged_data_BMI %>% 
+  summarise(mean_bmi = mean(BMI),max_bmi = max(BMI), min_bmi = min(BMI))
+
+
+sum_stats
+
+```
+
+
+
+It appears that users of this fitness tracker in this dataset have an average BMI of 25.2 which is below the average BMI in the US (26.6 for men and 26.5 for women. (source:
+
+https://www.cdc.gov/nchs/data/nhanes/databriefs/adultweight.pdf)
+
+However, there is one outlier with a BMI of 47.54. Overall the users of the fitness tracker appear to have a lower BMI than, for example, the average person in the US.
+
+
+
+
+```{r include=FALSE}
+
+# This code is not used 
+
+merged_data_BMI <- merged_data_BMI %>% 
+ group_by(Id) %>% 
+  mutate(mean_Dist = mean(TotalDistance)) %>%
+    mutate(mean_veryactive = mean(VeryActiveMinutes)) %>% 
+      mutate(mean_fairlyactive = mean(FairlyActiveMinutes)) %>% 
+      mutate(mean_lightlyactive = mean(LightlyActiveMinutes))
+
+
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+
+# This code is not used 
+
+bmi_steps <- ggplot(data= merged_data_BMI) + geom_point(mapping=aes(x=WeightPounds, y= mean_veryactive), colour="green") +
+   geom_point(mapping=aes(x=WeightPounds, y= mean_fairlyactive), colour = "blue") +
+   geom_point(mapping=aes(x=WeightPounds, y= mean_lightlyactive), colour = "red") +
+     ylab("ActivityMinutes") + labs(color="Legend",title="Average Activity Minutes and weight of participant") + scale_color_manual(labels = colors)
+bmi_steps
+```
+
+
+# Sleep data
+
+
+First I check how many people use the tracker to check their sleep.
+
+
+```{r}
+rawdate <- strptime(sleep_data$SleepDay,format="%Y-%m-%d") 
+
+
+
+dates <- as.Date(rawdate,"%m%d%Y")
+
+
+sleep_data <- sleep_data %>% 
+  mutate(SleepDay = dates) %>% 
+  mutate(TotalHoursAsleep = TotalMinutesAsleep/60) %>%
+  mutate(TotalHoursInBed = TotalTimeInBed /60) %>% 
+  mutate(HoursAwake = TotalHoursInBed-TotalHoursAsleep) %>% 
+  mutate(MinutesAwake = TotalTimeInBed-TotalMinutesAsleep)
+  
+```
+
+
+```{r}
+
+check <- sleep_data %>% 
+  tabyl(Id)
+
+check
+```
+
+
+* Overall there are 24 Id's
+
+* That means that 70 % of users used the tracker to track their sleep
+
+* 15 users used the tracker to track their sleep on more than 10 
+
+
+
+```{r}
+summary(sleep_data)
+
+```
+
+On average people sleep *6.9911* hours per night, and people lay awake *40 Minutes* per night on average.
+
+Next I merge main data with sleep tracking data.
+
+```{r}
+merged_data <- merge(x= main_data,y = sleep_data, by = "Id", all.x = TRUE)
+
+merged_data <- merged_data %>%
+  drop_na() 
+  
+head(merged_data)
+```
+
+Some further inspection and statistics of the data appears not to reveal any strong relationships between sleep data and activity, also for many users there is not enough sleep data logged.
+
+```{r}
+
+merged_data_analysis <- merged_data %>% 
+  summarise(cor(TotalSteps,MinutesAwake),cor(SedentaryMinutes,TotalMinutesAsleep),
+            cor(VeryActiveMinutes,TotalDistance), cor(VeryActiveMinutes, MinutesAwake))
+
+merged_data_analysis
+
+```
+
